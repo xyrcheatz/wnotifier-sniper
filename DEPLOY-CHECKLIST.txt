@@ -1,0 +1,11 @@
+1. npm install
+2. npx wrangler login
+3. npx wrangler d1 create wnotifier-cloud-db
+4. Paste database_id into wrangler.jsonc
+5. npx wrangler d1 migrations apply wnotifier-cloud-db --remote
+6. Generate a 32-byte base64 key:
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+7. npx wrangler secret put CREDENTIAL_KEY_B64
+8. npx wrangler deploy
+9. Open the workers.dev URL
+10. Sign up, save your own WNotifier cookie, set max cost, Start sniper
