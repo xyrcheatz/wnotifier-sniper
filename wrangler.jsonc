@@ -20,7 +20,7 @@
     {
       "binding": "DB",
       "database_name": "wnotifier-cloud-db",
-      "database_id": "PASTE_YOUR_D1_DATABASE_ID_HERE",
+      "database_id": "090d8cca-3a33-4d51-b251-6911c572070b",
       "migrations_dir": "migrations"
     }
   ],
