@@ -1,0 +1,25 @@
+Your GitHub repository ROOT must look exactly like this:
+
+wnotifier-sniper/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── migrations/
+│   └── 0001_initial.sql
+├── public/
+│   └── index.html
+├── src/
+│   └── index.js
+├── .gitignore
+├── DEPLOY-CHECKLIST.txt
+├── README.md
+├── SECURITY.md
+├── package.json
+└── wrangler.jsonc
+
+IMPORTANT:
+- `src/index.js` must be inside `src/`
+- `public/index.html` must be inside `public/`
+- `migrations/0001_initial.sql` must be inside `migrations/`
+- `wrangler.jsonc` and `package.json` must be at the repository root
+- Do NOT upload a parent folder around these files.
