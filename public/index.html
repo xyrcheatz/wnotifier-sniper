@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WNotifier Cloud</title>
+  <style>
+    *{box-sizing:border-box} :root{color-scheme:dark}
+    body{margin:0;background:#070b11;color:#f3f6fb;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{width:min(1050px,calc(100% - 28px));margin:28px auto}
+    .card{background:#0d131c;border:1px solid #243044;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 18px 50px #0004}
+    h1,h2{margin:0 0 10px} h1{font-size:30px} h2{font-size:18px}
+    .muted{color:#8fa0b8}.row{display:flex;gap:10px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+    input,textarea{width:100%;background:#080d14;border:1px solid #2c394e;color:#fff;border-radius:9px;padding:11px;outline:none}
+    textarea{min-height:96px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+    input:focus,textarea:focus{border-color:#318dff}
+    button{border:0;border-radius:9px;padding:11px 15px;font-weight:800;cursor:pointer;background:#268bff;color:#fff}
+    button.secondary{background:#273346}button.danger{background:#e84a5b}button.good{background:#33cf79;color:#06140c}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .pill{display:inline-flex;align-items:center;gap:7px;background:#121c29;border:1px solid #2d3a50;border-radius:999px;padding:7px 10px;font-size:12px;margin:3px 4px 3px 0}
+    .dot{width:8px;height:8px;border-radius:50%;background:#758397}.on .dot{background:#41df82;box-shadow:0 0 10px #41df82}.off .dot{background:#ff6473}
+    .notice{border:1px solid #544524;background:#211b0e;color:#ffd36c;border-radius:10px;padding:12px;font-size:13px;line-height:1.45}
+    .ok{color:#48df8a}.err{color:#ff6878}.hide{display:none!important}
+    #logs{max-height:360px;overflow:auto;background:#070a0f;border:1px solid #202b3b;border-radius:10px;padding:10px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+    .log{padding:7px 3px;border-bottom:1px solid #131b27}.time{color:#6f7f96}.success{color:#55e292}.error{color:#ff7583}.match{color:#67a9ff}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .auth{max-width:500px;margin:8vh auto}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}.top{flex-direction:column}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="authView" class="auth card">
+    <h1>WNotifier Cloud</h1>
+    <p class="muted">Create a dashboard account or sign in.</p>
+    <div class="row">
+      <button id="loginTab" class="secondary" onclick="setAuthMode('login')">Login</button>
+      <button id="signupTab" onclick="setAuthMode('signup')">Sign up</button>
+    </div>
+    <label>Username</label>
+    <input id="authUser" autocomplete="username">
+    <label>Password</label>
+    <input id="authPass" type="password" autocomplete="current-password">
+    <p id="authMsg"></p>
+    <button id="authSubmit" class="good" onclick="submitAuth()">Create account</button>
+  </section>
+
+  <main id="appView" class="hide">
+    <div class="top">
+      <div>
+        <h1>WNotifier Cloud</h1>
+        <div class="muted">Normal Access only · USA (Los Angeles) · 60m → 30m → 15m</div>
+      </div>
+      <div class="row">
+        <span id="statusPill" class="pill off"><span class="dot"></span><span id="statusText">Stopped</span></span>
+        <button class="secondary" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <section class="card">
+      <h2>Secure vault</h2>
+      <div class="notice">
+        WNotifier cookie and Discord webhook are encrypted before being written to D1 and are never returned by the API.
+        They are still usable by the Worker while the sniper runs, so a Cloudflare account owner who can replace the Worker code cannot be cryptographically prevented from changing that code to expose them.
+      </div>
+      <div class="grid">
+        <div>
+          <label>WNotifier cookie header</label>
+          <textarea id="cookieInput" placeholder="Paste the Cookie request header, e.g. name=value; another=value"></textarea>
+          <div id="cookieState" class="muted"></div>
+          <div class="row" style="margin-top:10px">
+            <button onclick="saveVault()">Save vault</button>
+            <button class="danger" onclick="clearCookie()">Clear cookie</button>
+          </div>
+        </div>
+        <div>
+          <label>Discord webhook</label>
+          <input id="webhookInput" type="password" placeholder="https://discord.com/api/webhooks/...">
+          <div id="webhookState" class="muted"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="secondary" onclick="testWebhook()">Test ping</button>
+            <button class="danger" onclick="clearWebhook()">Clear webhook</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Sniper settings</h2>
+      <div class="grid">
+        <div>
+          <label>Maximum total rent cost ($)</label>
+          <input id="maxCost" type="number" min="0" step="0.01" value="7">
+        </div>
+        <div>
+          <label>Background scan interval (ms)</label>
+          <input id="scanInterval" type="number" min="5000" step="1000" value="10000">
+          <div class="muted" style="font-size:12px;margin-top:5px">Cloudflare build minimum: 5000 ms.</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:13px">
+        <button onclick="saveSettings()">Save settings</button>
+        <button class="good" onclick="startSniper()">Start sniper</button>
+        <button class="danger" onclick="stopSniper()">Stop</button>
+        <button class="secondary" onclick="scanOnce()">Scan once now</button>
+      </div>
+      <p id="actionMsg"></p>
+    </section>
+
+    <section class="card">
+      <h2>Activity</h2>
+      <div id="logs"><div class="muted">No activity yet.</div></div>
+    </section>
+  </main>
+</div>
+
+<script>
+let authMode = "signup";
+let refreshTimer = null;
+
+function setAuthMode(mode){
+  authMode = mode;
+  document.getElementById("loginTab").className = mode === "login" ? "" : "secondary";
+  document.getElementById("signupTab").className = mode === "signup" ? "" : "secondary";
+  document.getElementById("authSubmit").textContent = mode === "signup" ? "Create account" : "Login";
+  document.getElementById("authPass").autocomplete = mode === "signup" ? "new-password" : "current-password";
+  document.getElementById("authMsg").textContent = "";
+}
+
+async function api(path, options={}){
+  const res = await fetch(path, options);
+  let data = {};
+  try { data = await res.json(); } catch {}
+  if(!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+async function submitAuth(){
+  const username = document.getElementById("authUser").value.trim();
+  const password = document.getElementById("authPass").value;
+  const msg = document.getElementById("authMsg");
+  msg.className = "";
+  msg.textContent = "Working...";
+  try{
+    await api(`/api/${authMode === "signup" ? "signup" : "login"}`, {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({username,password})
+    });
+    msg.className = "ok";
+    msg.textContent = "Signed in.";
+    await boot();
+  }catch(e){
+    msg.className = "err";
+    msg.textContent = e.message;
+  }
+}
+
+async function logout(){
+  await api("/api/logout",{method:"POST"}).catch(()=>{});
+  clearInterval(refreshTimer);
+  location.reload();
+}
+
+async function boot(){
+  try{
+    await api("/api/me");
+  }catch{
+    document.getElementById("authView").classList.remove("hide");
+    document.getElementById("appView").classList.add("hide");
+    return;
+  }
+  document.getElementById("authView").classList.add("hide");
+  document.getElementById("appView").classList.remove("hide");
+  await refreshAll();
+  if(refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(refreshAll, 3000);
+}
+
+async function refreshAll(){
+  await Promise.allSettled([refreshStatus(),refreshVault(),refreshActivity()]);
+}
+
+async function refreshStatus(){
+  const s = await api("/api/status");
+  document.getElementById("maxCost").value = s.maxCost;
+  document.getElementById("scanInterval").value = s.scanIntervalMs;
+  const pill = document.getElementById("statusPill");
+  pill.className = `pill ${s.enabled ? "on" : "off"}`;
+  document.getElementById("statusText").textContent = s.enabled ? "Running" : "Stopped";
+}
+
+async function refreshVault(){
+  const v = await api("/api/vault");
+  document.getElementById("cookieState").textContent = v.hasCookie ? "✓ Cookie saved securely" : "No cookie saved";
+  document.getElementById("webhookState").textContent = v.hasWebhook ? "✓ Webhook saved securely" : "No webhook saved";
+}
+
+async function saveVault(){
+  const cookie = document.getElementById("cookieInput").value.trim();
+  const webhook = document.getElementById("webhookInput").value.trim();
+  try{
+    await api("/api/vault",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({cookie,webhook})
+    });
+    document.getElementById("cookieInput").value = "";
+    document.getElementById("webhookInput").value = "";
+    await refreshVault();
+    setAction("Vault saved.",true);
+  }catch(e){setAction(e.message,false)}
+}
+
+async function clearCookie(){
+  if(!confirm("Remove the saved WNotifier cookie?")) return;
+  await api("/api/vault",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({clearCookie:true})
+  });
+  await refreshVault();
+}
+
+async function clearWebhook(){
+  if(!confirm("Remove the saved Discord webhook?")) return;
+  await api("/api/vault",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({clearWebhook:true})
+  });
+  await refreshVault();
+}
+
+async function saveSettings(){
+  try{
+    const maxCost = Number(document.getElementById("maxCost").value);
+    const scanIntervalMs = Number(document.getElementById("scanInterval").value);
+    const r = await api("/api/settings",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({maxCost,scanIntervalMs})
+    });
+    document.getElementById("scanInterval").value = r.scanIntervalMs;
+    setAction("Settings saved.",true);
+  }catch(e){setAction(e.message,false)}
+}
+
+async function startSniper(){
+  try{
+    await saveSettings();
+    await api("/api/sniper/start",{method:"POST"});
+    setAction("Sniper started.",true);
+    await refreshStatus();
+  }catch(e){setAction(e.message,false)}
+}
+
+async function stopSniper(){
+  try{
+    await api("/api/sniper/stop",{method:"POST"});
+    setAction("Sniper stopped.",true);
+    await refreshStatus();
+  }catch(e){setAction(e.message,false)}
+}
+
+async function scanOnce(){
+  setAction("Scanning...",true);
+  try{
+    const r = await api("/api/sniper/scan-once",{method:"POST"});
+    const result = r.result || {};
+    if(result.rented){
+      setAction(`Rent submitted on Slot #${result.slot}.`,true);
+    }else{
+      setAction(result.message || result.error || "Scan finished.",!result.error);
+    }
+    await refreshAll();
+  }catch(e){setAction(e.message,false)}
+}
+
+async function testWebhook(){
+  try{
+    const r = await api("/api/webhook/test",{method:"POST"});
+    setAction(r.ok ? "Webhook ping sent." : "Webhook is missing or failed.",r.ok);
+  }catch(e){setAction(e.message,false)}
+}
+
+async function refreshActivity(){
+  const r = await api("/api/activity");
+  const logs = document.getElementById("logs");
+  if(!r.activity.length){
+    logs.innerHTML = '<div class="muted">No activity yet.</div>';
+    return;
+  }
+  logs.innerHTML = r.activity.map(x=>{
+    const cls = ["success","error","match"].includes(x.level) ? x.level : "";
+    const d = new Date(Number(x.created_at));
+    return `<div class="log ${cls}"><span class="time">[${escapeHtml(d.toLocaleString())}]</span> ${escapeHtml(x.message)}</div>`;
+  }).join("");
+}
+
+function setAction(text,ok){
+  const e=document.getElementById("actionMsg");
+  e.className=ok?"ok":"err";
+  e.textContent=text;
+}
+
+function escapeHtml(s){
+  const d=document.createElement("div");
+  d.textContent=String(s??"");
+  return d.innerHTML;
+}
+
+setAuthMode("signup");
+boot();
+</script>
+</body>
+</html>
